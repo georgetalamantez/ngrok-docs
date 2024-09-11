@@ -55,7 +55,7 @@ jobs:
 
       # 4. Use S3 Sync GitHub Action to sync the new HTML files to Storj S3
       - name: Sync new HTML files to Storj S3
-        uses: jakejarvis/s3-sync-action@v1
+        uses: jakejarvis/s3-sync-action@v0.5.1
         with:
           args: --acl public-read  # You can specify additional arguments here
         env:
