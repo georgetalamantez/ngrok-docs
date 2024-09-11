@@ -1,4 +1,4 @@
-name: Process New TorrentGalaxy RSS Items to HTML4
+name: Process New TorrentGalaxy RSS Items to HTML5
 
 on:
   schedule:
@@ -56,7 +56,7 @@ jobs:
 
       # 4. Configure AWS credentials for Storj S3
       - name: Configure AWS credentials for Storj
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v3
         with:
           aws-access-key-id: ${{ secrets.storjuser }}
           aws-secret-access-key: ${{ secrets.storjpass }}
