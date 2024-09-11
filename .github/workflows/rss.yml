@@ -1,4 +1,4 @@
-name: Process New TorrentGalaxy RSS Items to HTML
+name: Process New TorrentGalaxy RSS Items to HTML2
 
 on:
   schedule:
