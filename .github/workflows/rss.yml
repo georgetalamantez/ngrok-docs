@@ -1,4 +1,4 @@
-name: Process New TorrentGalaxy RSS Items to HTML3
+name: Process New TorrentGalaxy RSS Items to HTML4
 
 on:
   schedule:
@@ -9,31 +9,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout repository
+      # 1. Checkout repository (updated to latest version)
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4  # Use the latest version
 
-      # 2. Fetch and Process TorrentGalaxy RSS Feed
+      # 2. Install xmllint
+      - name: Install xmllint
+        run: sudo apt-get update && sudo apt-get install -y libxml2-utils
+
+      # 3. Fetch and Process TorrentGalaxy RSS Feed
       - name: Fetch and Process RSS Feed
         run: |
           RSS_FEED_URL="https://torrentgalaxy.to/rss"
-          
+
           # Fetch RSS feed
           curl -s $RSS_FEED_URL -o current-rss.xml
-          
+
           # Extract unique GUIDs (torrent links) from the current RSS feed
           xmllint --xpath '//item/guid/text()' current-rss.xml > current-guids.txt
-          
+
           # Compare with previously saved RSS items to detect new ones
           if [ -f previous-guids.txt ]; then
             comm -23 <(sort current-guids.txt) <(sort previous-guids.txt) > new-guids.txt
           else
             cp current-guids.txt new-guids.txt
           fi
-          
+
           # Save the current GUIDs for future comparisons
           cp current-guids.txt previous-guids.txt
-          
+
           # Extract new items' details and generate HTML files
           for guid in $(cat new-guids.txt); do
             # Use xpath to extract title, link, and description
@@ -50,7 +54,7 @@ jobs:
             echo "</body></html>" >> $HTML_FILE
           done
 
-      # 3. Configure AWS credentials for Storj S3
+      # 4. Configure AWS credentials for Storj S3
       - name: Configure AWS credentials for Storj
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -59,7 +63,7 @@ jobs:
           aws-region: us-west-2
           endpoint-url: ${{ secrets.STORJENDPOINT }}
 
-      # 4. Upload new HTML files to Storj S3 bucket (jrt1201-video in the rss folder)
+      # 5. Upload new HTML files to Storj S3 bucket (jrt1201-video in the rss folder)
       - name: Upload new HTML files to Storj
         run: |
           for file in torrent_*.html; do
