@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [20]  # Explicitly specify Node.js 20
+        node-version: [20.x]  # Explicitly specify Node.js 20
 
     steps:
       # 1. Checkout repository
