@@ -1,0 +1,28 @@
+name: Test Upload to Storj S3
+
+on:
+  workflow_dispatch:
+    branches:
+      - main
+
+jobs:
+  upload-test-file:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up AWS CLI
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.storjuser }}
+          aws-secret-access-key: ${{ secrets.storjpass }}
+          aws-region: us-east-1  # Set your region
+
+      - name: Create test file
+        run: echo "This is a test file for Storj S3 upload." > test-file.txt
+
+      - name: Upload test file to Storj S3
+        run: |
+          aws s3 cp test-file.txt s3://jrt1201-video/rss/test-file.txt --endpoint-url https://gateway.storjshare.io
