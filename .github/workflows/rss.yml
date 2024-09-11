@@ -1,4 +1,4 @@
-name: Process New TorrentGalaxy RSS Items to HTML2
+name: Process New TorrentGalaxy RSS Items to HTML3
 
 on:
   schedule:
@@ -7,14 +7,11 @@ on:
 jobs:
   process-rss:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [20.x]  # Explicitly specify Node.js 20
 
     steps:
       # 1. Checkout repository
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # 2. Fetch and Process TorrentGalaxy RSS Feed
       - name: Fetch and Process RSS Feed
