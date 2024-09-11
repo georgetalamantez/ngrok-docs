@@ -1,4 +1,4 @@
-name: Process New TorrentGalaxy RSS Items to HTML
+name: deploy
 
 on:
   push:
