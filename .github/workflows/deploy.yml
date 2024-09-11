@@ -1,4 +1,4 @@
-name: Deploy ngrok docs
+name: Process New TorrentGalaxy RSS Items to HTML
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
 jobs:
   deploy:
-    name: Deploy ngrok docs
+    name: Process New TorrentGalaxy RSS Items to HTML
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3

@@ -7,6 +7,9 @@ on:
 jobs:
   process-rss:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20]  # Explicitly specify Node.js 20
 
     steps:
       # 1. Checkout repository
