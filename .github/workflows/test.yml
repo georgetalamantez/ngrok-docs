@@ -53,18 +53,14 @@ jobs:
             echo "</body></html>" >> $HTML_FILE
           done
 
-      # 4. Configure AWS credentials for Storj S3
-      - name: Configure AWS credentials for Storj
-        uses: aws-actions/configure-aws-credentials@v3
+      # 4. Use S3 Sync GitHub Action to sync the new HTML files to Storj S3
+      - name: Sync new HTML files to Storj S3
+        uses: jakejarvis/s3-sync-action@v1
         with:
-          aws-access-key-id: ${{ secrets.storjuser }}
-          aws-secret-access-key: ${{ secrets.storjpass }}
-          aws-region: us-west-2
-          endpoint-url: ${{ secrets.STORJENDPOINT }}
-
-      # 5. Upload new HTML files to Storj S3 bucket (jrt1201-video in the rss folder)
-      - name: Upload new HTML files to Storj
-        run: |
-          for file in torrent_*.html; do
-            aws s3 cp $file s3://jrt1201-video/rss/$file --acl public-read
-          done
+          args: --acl public-read  # You can specify additional arguments here
+        env:
+          AWS_S3_BUCKET: jrt1201-video/rss  # Replace with your bucket and folder
+          AWS_ACCESS_KEY_ID: ${{ secrets.storjuser }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.storjpass }}
+          AWS_REGION: us-east-1  # Region if required for the custom endpoint
+          AWS_ENDPOINT_URL: ${{ secrets.STORJENDPOINT }}
