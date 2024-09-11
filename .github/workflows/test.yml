@@ -55,7 +55,7 @@ jobs:
 
       # 4. Configure AWS credentials for Storj S3
       - name: Configure AWS credentials for Storj
-        uses: aws-actions/configure-aws-credentials@v3
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.storjuser }}
           aws-secret-access-key: ${{ secrets.storjpass }}
