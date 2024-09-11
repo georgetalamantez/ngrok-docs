@@ -1,4 +1,4 @@
-name: Process New TorrentGalaxy RSS Items to HTML5
+name: Process New TorrentGalaxy RSS Items to HTML6
 
 on:
   schedule:
