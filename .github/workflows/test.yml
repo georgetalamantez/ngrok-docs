@@ -1,0 +1,70 @@
+name: test rss
+
+on:
+  workflow_dispatch
+
+jobs:
+  process-rss:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout repository (updated to latest version)
+      - name: Checkout Repository
+        uses: actions/checkout@v4  # Use the latest version
+
+      # 2. Install xmllint
+      - name: Install xmllint
+        run: sudo apt-get update && sudo apt-get install -y libxml2-utils
+
+      # 3. Fetch and Process TorrentGalaxy RSS Feed
+      - name: Fetch and Process RSS Feed
+        run: |
+          RSS_FEED_URL="https://torrentgalaxy.to/rss"
+
+          # Fetch RSS feed
+          curl -s $RSS_FEED_URL -o current-rss.xml
+
+          # Extract unique GUIDs (torrent links) from the current RSS feed
+          xmllint --xpath '//item/guid/text()' current-rss.xml > current-guids.txt
+
+          # Compare with previously saved RSS items to detect new ones
+          if [ -f previous-guids.txt ]; then
+            comm -23 <(sort current-guids.txt) <(sort previous-guids.txt) > new-guids.txt
+          else
+            cp current-guids.txt new-guids.txt
+          fi
+
+          # Save the current GUIDs for future comparisons
+          cp current-guids.txt previous-guids.txt
+
+          # Extract new items' details and generate HTML files
+          for guid in $(cat new-guids.txt); do
+            # Use xpath to extract title, link, and description
+            TITLE=$(xmllint --xpath "string(//item[guid='$guid']/title)" current-rss.xml)
+            LINK=$(xmllint --xpath "string(//item[guid='$guid']/link)" current-rss.xml)
+            DESCRIPTION=$(xmllint --xpath "string(//item[guid='$guid']/description)" current-rss.xml)
+
+            # Generate HTML content for each new item
+            HTML_FILE="torrent_${guid}.html"
+            echo "<html><head><title>$TITLE</title></head><body>" > $HTML_FILE
+            echo "<h1>$TITLE</h1>" >> $HTML_FILE
+            echo "<p>$DESCRIPTION</p>" >> $HTML_FILE
+            echo "<p><a href=\"$LINK\">Download Torrent</a></p>" >> $HTML_FILE
+            echo "</body></html>" >> $HTML_FILE
+          done
+
+      # 4. Configure AWS credentials for Storj S3
+      - name: Configure AWS credentials for Storj
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.storjuser }}
+          aws-secret-access-key: ${{ secrets.storjpass }}
+          aws-region: us-west-2
+          endpoint-url: ${{ secrets.STORJENDPOINT }}
+
+      # 5. Upload new HTML files to Storj S3 bucket (jrt1201-video in the rss folder)
+      - name: Upload new HTML files to Storj
+        run: |
+          for file in torrent_*.html; do
+            aws s3 cp $file s3://jrt1201-video/rss/$file --acl public-read
+          done
