@@ -19,6 +19,14 @@ jobs:
       - name: Install Dependencies
         run: npm install axios cheerio fs-extra
 
+      # 🔹 Restore cached downloaded.json BEFORE downloading
+      - name: Restore Download History
+        uses: actions/cache@v3
+        with:
+          path: downloaded.json
+          key: downloaded-json
+          restore-keys: downloaded-json-
+
       - name: Extract Torrent Links
         run: node extract-torrents.mjs
 
@@ -49,6 +57,14 @@ jobs:
             echo "No torrents found, skipping download."
           fi
 
+      # 🔹 Save updated downloaded.json to cache AFTER downloading
+      - name: Save Download History
+        uses: actions/cache@v3
+        with:
+          path: downloaded.json
+          key: downloaded-json-${{ github.run_id }}
+          restore-keys: downloaded-json-
+          
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
