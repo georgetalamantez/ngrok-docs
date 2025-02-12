@@ -29,8 +29,5 @@ jobs:
       - name: Sync to Dev S3 Bucket
         run: aws s3 cp dev-rss.xml s3://rssjrt1201-video/rss
 
-      - name: Sync to Stage S3 Bucket
-        run: aws s3 cp stage-rss.xml s3://rssjrt1201-video/rss
-
       - name: Sync to Prod S3 Bucket
         run: aws s3 cp rss.xml s3://rssjrt1201-video/rss
