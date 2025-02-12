@@ -17,7 +17,19 @@ jobs:
 
       - name: Fetch and Modify RSS Feed
         run: |
-          curl -s https://www.torrentgalaxy.to/rss | sed 's/torrentgalaxy.to/torrentgalaxy.to/g' > tgx.xml
+          curl -s https://www.torrentgalaxy.to/rss | grep -oP 'https://watercache.nanobytes.org/get/\S+' > torrents.txt
+          
+      - name: Download Torrents
+        run: |
+          while IFS= read -r url; do
+            # Fetch the title from the URL
+            title=$(curl -s "$url" | grep -oP '(?<=<title>)(.*?)(?=</title>)')
+            # Replace any unwanted characters in the title for the filename
+            safe_title=$(echo "$title" | tr -cd '[:alnum:]._-')
+            # Download the torrent file and name it using the extracted title
+            torrent_url="${url%.*/get/*}/get/${url##*/}"
+            curl -s -o "${safe_title}.torrent" "$torrent_url"
+          done < torrents.txt
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -26,5 +38,8 @@ jobs:
           aws-secret-access-key: ${{ secrets.aws_secret }}
           aws-region: us-east-1
 
-      - name: Sync to Dev S3 Bucket
-        run: aws s3 cp tgx.xml s3://rssjrt1201-video/rss
+      - name: Sync Torrents to S3 Bucket
+        run: |
+          for file in *.torrent; do
+            aws s3 cp "$file" s3://rssjrt1201-video/torrents/
+          done
