@@ -3,6 +3,9 @@ name: Process New TorrentGalaxy RSS Items to HTML
 on:
   schedule:
     - cron: '* * * * *'  # Runs every minute
+  push:
+    branches:
+      - main  # Runs when changes are pushed to the 'main' branch (adjust if needed)
 
 jobs:
   process-rss:
@@ -58,8 +61,8 @@ jobs:
       - name: Configure AWS credentials for AWS S3
         uses: aws-actions/configure-aws-credentials@v3
         with:
-          aws-access-key-id: ${{ secrets.aws_id_ID }}
-          aws-secret-access-key: ${{ secrets.aws_secret }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-2  # Use the region of your S3 bucket
 
       # 5. Upload new HTML files to S3
