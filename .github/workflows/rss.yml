@@ -1,53 +1,51 @@
-name: Sync tgx Feed to S3 Buckets
+name: Sync TGX Feed to S3 Buckets
 
 on:
   schedule:
-    - cron: '* * * * *'  # Runs every minute (adjust as needed)
+    - cron: '*/10 * * * *'  # Runs every 10 minutes
   push:
     branches:
-      - main
+      - main  # Runs when changes are pushed to 'main'
 
 jobs:
   sync-rss-feed:
     name: Sync RSS Feed
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Fetch and Extract RSS Links
-        run: |
-          set -o pipefail
-          curl -s https://torrentgalaxy.to/rss | xmllint --xpath '//item/link/text()' - | grep '^https://' > torrents.txt || echo "No torrent links found" > torrents.txt
-          cat torrents.txt # Debug: Display the extracted URLs
+      - name: Install Dependencies
+        run: npm install axios cheerio fs-extra
+
+      - name: Extract Torrent Links
+        run: node extract-torrents.mjs
 
       - name: Download Torrents
         run: |
-          while IFS= read -r url; do
-            echo "Downloading: $url" # Debug: Show which URL is being processed
+          if [[ -s torrents.json ]]; then
+            cat torrents.json | jq -c '.[]' | while read i; do
+              url=$(echo "$i" | jq -r '.url')
+              filename=$(echo "$i" | jq -r '.filename' | tr ' ' '_')
 
-            # Improved title extraction (handles potential errors)
-            title=$(curl -s "$url" | grep -oP '(?<=<title>)(.*?)(?=</title>)' || echo "No title found")
-            safe_title=$(echo "$title" | tr -cd '[:alnum:]._-' | sed 's/^[.-]*//;s/[.-]*$//') # Remove leading/trailing . and -
-
-            # Construct torrent URL (more robust)
-            torrent_url="${url%/*}/get/${url##*/}"  # Corrected URL construction
-            echo "Torrent URL: $torrent_url" # Debug: Display the constructed torrent URL
-
-            curl -s -o "${safe_title}.torrent" "$torrent_url" || echo "Failed to download $torrent_url" # Handle download errors
-            ls -l *.torrent # Debug: List downloaded files
-          done < torrents.txt
+              echo "Downloading: $filename"
+              curl -s -o "${filename}.torrent" "$url"
+            done
+          else
+            echo "No torrents found, skipping download."
+          fi
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.aws_id }}
-          aws-secret-access-key: ${{ secrets.aws_secret }}
+          aws-access-key-id: ${{ secrets.AWS_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET }}
           aws-region: us-east-1
 
       - name: Sync Torrents to S3 Bucket
         run: |
+          shopt -s nullglob
           for file in *.torrent; do
-            echo "Uploading: $file"  # Debug: Show which file is being uploaded
-            aws s3 cp "$file" s3://rssjrt1201-video/torrents/ || echo "Failed to upload $file" # Handle upload errors
+            aws s3 cp "$file" s3://rssjrt1201-video/torrents/
           done
