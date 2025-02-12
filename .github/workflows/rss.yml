@@ -18,8 +18,6 @@ jobs:
       - name: Fetch and Modify RSS Feed
         run: |
           curl -s https://www.torrentgalaxy.to/rss | sed 's/webflow.dev-ngrok.com/dev-ngrok.com/g' > dev-rss.xml
-          curl -s https://www.torrentgalaxy.to/rss | sed 's/webflow.stage-ngrok.com/stage-ngrok.com/g' > stage-rss.xml
-          curl -s https://www.torrentgalaxy.to/rss | sed 's/webflow.ngrok.com/ngrok.com/g' > rss.xml
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
