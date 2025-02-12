@@ -1,4 +1,4 @@
-name: Process New TorrentGalaxy RSS Items to HTML6
+name: Process New TorrentGalaxy RSS Items to HTML
 
 on:
   schedule:
@@ -9,13 +9,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout repository (updated to latest version)
+      # 1. Checkout repository
       - name: Checkout Repository
-        uses: actions/checkout@v4  # Use the latest version
+        uses: actions/checkout@v4  
 
-      # 2. Install xmllint
-      - name: Install xmllint
-        run: sudo apt-get update && sudo apt-get install -y libxml2-utils
+      # 2. Install xmllint and xmlstarlet
+      - name: Install XML utilities
+        run: sudo apt-get update && sudo apt-get install -y libxml2-utils xmlstarlet
 
       # 3. Fetch and Process TorrentGalaxy RSS Feed
       - name: Fetch and Process RSS Feed
@@ -28,24 +28,24 @@ jobs:
           # Extract unique GUIDs (torrent links) from the current RSS feed
           xmllint --xpath '//item/guid/text()' current-rss.xml > current-guids.txt
 
-          # Compare with previously saved RSS items to detect new ones
-          if [ -f previous-guids.txt ]; then
-            comm -23 <(sort current-guids.txt) <(sort previous-guids.txt) > new-guids.txt
-          else
-            cp current-guids.txt new-guids.txt
-          fi
+          # Ensure previous GUIDs exist
+          if [ ! -f previous-guids.txt ]; then touch previous-guids.txt; fi
+
+          # Compare and extract new GUIDs
+          sort current-guids.txt > sorted-current.txt
+          sort previous-guids.txt > sorted-previous.txt
+          comm -23 sorted-current.txt sorted-previous.txt > new-guids.txt
 
           # Save the current GUIDs for future comparisons
-          cp current-guids.txt previous-guids.txt
+          cp sorted-current.txt previous-guids.txt
 
-          # Extract new items' details and generate HTML files
+          # Process new items
           for guid in $(cat new-guids.txt); do
-            # Use xpath to extract title, link, and description
-            TITLE=$(xmllint --xpath "string(//item[guid='$guid']/title)" current-rss.xml)
-            LINK=$(xmllint --xpath "string(//item[guid='$guid']/link)" current-rss.xml)
-            DESCRIPTION=$(xmllint --xpath "string(//item[guid='$guid']/description)" current-rss.xml)
+            TITLE=$(xmlstarlet sel -t -m "//item[guid[text()='$guid']]" -v "title" -n current-rss.xml)
+            LINK=$(xmlstarlet sel -t -m "//item[guid[text()='$guid']]" -v "link" -n current-rss.xml)
+            DESCRIPTION=$(xmlstarlet sel -t -m "//item[guid[text()='$guid']]" -v "description" -n current-rss.xml)
 
-            # Generate HTML content for each new item
+            # Generate HTML file
             HTML_FILE="torrent_${guid}.html"
             echo "<html><head><title>$TITLE</title></head><body>" > $HTML_FILE
             echo "<h1>$TITLE</h1>" >> $HTML_FILE
@@ -54,18 +54,18 @@ jobs:
             echo "</body></html>" >> $HTML_FILE
           done
 
-      # 4. Configure AWS credentials for Storj S3
-      - name: Configure AWS credentials for Storj
+      # 4. Configure AWS credentials for AWS S3
+      - name: Configure AWS credentials for AWS S3
         uses: aws-actions/configure-aws-credentials@v3
         with:
-          aws-access-key-id: ${{ secrets.storjuser }}
-          aws-secret-access-key: ${{ secrets.storjpass }}
-          aws-region: us-west-2
-          endpoint-url: ${{ secrets.STORJENDPOINT }}
+          aws-access-key-id: ${{ secrets.aws_id_ID }}
+          aws-secret-access-key: ${{ secrets.aws_secret }}
+          aws-region: us-east-2  # Use the region of your S3 bucket
 
-      # 5. Upload new HTML files to Storj S3 bucket (jrt1201-video in the rss folder)
-      - name: Upload new HTML files to Storj
+      # 5. Upload new HTML files to S3
+      - name: Upload new HTML files to AWS S3
         run: |
+          shopt -s nullglob
           for file in torrent_*.html; do
-            aws s3 cp $file s3://jrt1201-video/rss/$file --acl public-read
+            aws s3 cp "$file" s3://rssjrt1201-video/rss/"$file" --acl public-read
           done
