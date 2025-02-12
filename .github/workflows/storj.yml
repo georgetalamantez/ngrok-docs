@@ -27,6 +27,8 @@ jobs:
       - name: Confirm gsutil installation
         run: gsutil version
 
+      - name: Authenticate gcloud CLI
+        run: gcloud auth application-default login --quiet
+
       - name: Upload test file to GCP Bucket
-        run: |
-          gsutil cp test-file.txt gs://jrt2301-actions/
+        run: gsutil cp test-file.txt gs://jrt2301-actions/
