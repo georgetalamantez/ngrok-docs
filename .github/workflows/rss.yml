@@ -2,10 +2,10 @@ name: Sync tgx Feed to S3 Buckets
 
 on:
   schedule:
-    - cron: '* * * * *'  # Runs at the start of every minute
+    - cron: '* * * * *'  # Runs every minute (adjust as needed)
   push:
     branches:
-      - main  # Runs when changes are pushed to the 'main' branch (adjust if needed)
+      - main
 
 jobs:
   sync-rss-feed:
@@ -15,21 +15,27 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Fetch and Modify RSS Feed
+      - name: Fetch and Extract RSS Links
         run: |
           set -o pipefail
-          curl -s https://torrentgalaxy.to/rss.php | grep -oP '<link>\Khttps://watercache.nanobytes.org/get/\S+' > torrents.txt || echo "No matches found" > torrents.txt
+          curl -s https://torrentgalaxy.to/rss | xmllint --xpath '//item/link/text()' - | grep '^https://' > torrents.txt || echo "No torrent links found" > torrents.txt
+          cat torrents.txt # Debug: Display the extracted URLs
 
       - name: Download Torrents
         run: |
           while IFS= read -r url; do
-            # Fetch the title from the URL
-            title=$(curl -s "$url" | grep -oP '(?<=<title>)(.*?)(?=</title>)')
-            # Replace any unwanted characters in the title for the filename
-            safe_title=$(echo "$title" | tr -cd '[:alnum:]._-')
-            # Download the torrent file and name it using the extracted title
-            torrent_url="${url%.*/get/*}/get/${url##*/}"
-            curl -s -o "${safe_title}.torrent" "$torrent_url"
+            echo "Downloading: $url" # Debug: Show which URL is being processed
+
+            # Improved title extraction (handles potential errors)
+            title=$(curl -s "$url" | grep -oP '(?<=<title>)(.*?)(?=</title>)' || echo "No title found")
+            safe_title=$(echo "$title" | tr -cd '[:alnum:]._-' | sed 's/^[.-]*//;s/[.-]*$//') # Remove leading/trailing . and -
+
+            # Construct torrent URL (more robust)
+            torrent_url="${url%/*}/get/${url##*/}"  # Corrected URL construction
+            echo "Torrent URL: $torrent_url" # Debug: Display the constructed torrent URL
+
+            curl -s -o "${safe_title}.torrent" "$torrent_url" || echo "Failed to download $torrent_url" # Handle download errors
+            ls -l *.torrent # Debug: List downloaded files
           done < torrents.txt
 
       - name: Configure AWS credentials
@@ -42,5 +48,6 @@ jobs:
       - name: Sync Torrents to S3 Bucket
         run: |
           for file in *.torrent; do
-            aws s3 cp "$file" s3://rssjrt1201-video/torrents/
+            echo "Uploading: $file"  # Debug: Show which file is being uploaded
+            aws s3 cp "$file" s3://rssjrt1201-video/torrents/ || echo "Failed to upload $file" # Handle upload errors
           done
