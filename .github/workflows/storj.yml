@@ -1,34 +1,6 @@
-name: Test Upload to GCP Bucket
-
-on:
-  workflow_dispatch:
-
-jobs:
-  upload-test-file:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Create test file
-        run: echo "This is a test file for GCP upload." > test-file.txt
-
-      - name: Authenticate with GCP
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: Install Google Cloud CLI
+      - name: Debug GCP Authentication
         run: |
-          sudo apt-get update
-          sudo apt-get install -y google-cloud-cli
-
-      - name: Confirm gsutil installation
-        run: gsutil version
-
-      - name: Authenticate gcloud CLI
-        run: gcloud auth application-default login --quiet
-
-      - name: Upload test file to GCP Bucket
-        run: gsutil cp test-file.txt gs://jrt2301-actions/
+          echo "Checking authenticated accounts..."
+          gcloud auth list
+          echo "Checking access to the bucket..."
+          gsutil ls gs://jrt2301-actions/
