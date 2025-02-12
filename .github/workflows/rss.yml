@@ -18,7 +18,7 @@ jobs:
       - name: Fetch and Modify RSS Feed
         run: |
           set -o pipefail
-          curl -s https://www.torrentgalaxy.to/rss | grep -oP 'https://watercache.nanobytes.org/get/\S+' > torrents.txt || echo "No matches found" > torrents.txt
+          curl -s https://www.torrentgalaxy.to/rss | grep -oP '<link>\Khttps://watercache.nanobytes.org/get/\S+' > torrents.txt || echo "No matches found" > torrents.txt
 
       - name: Download Torrents
         run: |
