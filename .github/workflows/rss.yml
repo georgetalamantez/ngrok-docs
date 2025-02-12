@@ -1,74 +1,38 @@
-name: Process New TorrentGalaxy RSS Items to HTML
+name: Sync tgx Feed to S3 Buckets
 
 on:
   schedule:
-    - cron: '* * * * *'  # Runs every minute
+    - cron: '* * * * *'  # Runs at the start of every minute
   push:
     branches:
       - main  # Runs when changes are pushed to the 'main' branch (adjust if needed)
 
 jobs:
-  process-rss:
+  sync-rss-feed:
+    name: Sync RSS Feed
     runs-on: ubuntu-latest
-
     steps:
-      # 1. Checkout repository
       - name: Checkout Repository
-        uses: actions/checkout@v4  
+        uses: actions/checkout@v3
 
-      # 2. Install xmllint and xmlstarlet
-      - name: Install XML utilities
-        run: sudo apt-get update && sudo apt-get install -y libxml2-utils xmlstarlet
-
-      # 3. Fetch and Process TorrentGalaxy RSS Feed
-      - name: Fetch and Process RSS Feed
+      - name: Fetch and Modify RSS Feed
         run: |
-          RSS_FEED_URL="https://torrentgalaxy.to/rss"
+          curl -s https://www.torrentgalaxy.to/rss | sed 's/webflow.dev-ngrok.com/dev-ngrok.com/g' > dev-rss.xml
+          curl -s https://www.torrentgalaxy.to/rss | sed 's/webflow.stage-ngrok.com/stage-ngrok.com/g' > stage-rss.xml
+          curl -s https://www.torrentgalaxy.to/rss | sed 's/webflow.ngrok.com/ngrok.com/g' > rss.xml
 
-          # Fetch RSS feed
-          curl -s $RSS_FEED_URL -o current-rss.xml
-
-          # Extract unique GUIDs (torrent links) from the current RSS feed
-          xmllint --xpath '//item/guid/text()' current-rss.xml > current-guids.txt
-
-          # Ensure previous GUIDs exist
-          if [ ! -f previous-guids.txt ]; then touch previous-guids.txt; fi
-
-          # Compare and extract new GUIDs
-          sort current-guids.txt > sorted-current.txt
-          sort previous-guids.txt > sorted-previous.txt
-          comm -23 sorted-current.txt sorted-previous.txt > new-guids.txt
-
-          # Save the current GUIDs for future comparisons
-          cp sorted-current.txt previous-guids.txt
-
-          # Process new items
-          for guid in $(cat new-guids.txt); do
-            TITLE=$(xmlstarlet sel -t -m "//item[guid[text()='$guid']]" -v "title" -n current-rss.xml)
-            LINK=$(xmlstarlet sel -t -m "//item[guid[text()='$guid']]" -v "link" -n current-rss.xml)
-            DESCRIPTION=$(xmlstarlet sel -t -m "//item[guid[text()='$guid']]" -v "description" -n current-rss.xml)
-
-            # Generate HTML file
-            HTML_FILE="torrent_${guid}.html"
-            echo "<html><head><title>$TITLE</title></head><body>" > $HTML_FILE
-            echo "<h1>$TITLE</h1>" >> $HTML_FILE
-            echo "<p>$DESCRIPTION</p>" >> $HTML_FILE
-            echo "<p><a href=\"$LINK\">Download Torrent</a></p>" >> $HTML_FILE
-            echo "</body></html>" >> $HTML_FILE
-          done
-
-      # 4. Configure AWS credentials for AWS S3
-      - name: Configure AWS credentials for AWS S3
-        uses: aws-actions/configure-aws-credentials@v3
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1  # Use the region of your S3 bucket
+          aws-access-key-id: ${{ secrets.aws_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret }}
+          aws-region: us-east-1
 
-      # 5. Upload new HTML files to S3
-      - name: Upload new HTML files to AWS S3
-        run: |
-          shopt -s nullglob
-          for file in torrent_*.html; do
-            aws s3 cp "$file" s3://rssjrt1201-video/rss/"$file" --acl public-read
-          done
+      - name: Sync to Dev S3 Bucket
+        run: aws s3 cp dev-rss.xml s3://rssjrt1201-video/rss
+
+      - name: Sync to Stage S3 Bucket
+        run: aws s3 cp stage-rss.xml s3://rssjrt1201-video/rss
+
+      - name: Sync to Prod S3 Bucket
+        run: aws s3 cp rss.xml s3://rssjrt1201-video/rss
