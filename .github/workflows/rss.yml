@@ -25,12 +25,25 @@ jobs:
       - name: Download Torrents
         run: |
           if [[ -s torrents.json ]]; then
+            if [[ ! -f downloaded.json ]]; then
+              echo "[]" > downloaded.json
+            fi
+
             cat torrents.json | jq -c '.[]' | while read i; do
               url=$(echo "$i" | jq -r '.url')
-              filename=$(echo "$i" | jq -r '.filename' | tr ' ' '_')
+              filename=$(echo "$i" | jq -r '.filename')
+
+              # Skip if already downloaded
+              if grep -q "\"$filename\"" downloaded.json; then
+                echo "Skipping $filename (already downloaded)."
+                continue
+              fi
 
               echo "Downloading: $filename"
-              curl -s -o "${filename}.torrent" "$url"
+              curl -s -o "$filename" "$url"
+
+              # Add to downloaded.json
+              jq ". + [\"$filename\"]" downloaded.json > temp.json && mv temp.json downloaded.json
             done
           else
             echo "No torrents found, skipping download."

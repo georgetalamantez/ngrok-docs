@@ -2,31 +2,43 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import fs from 'fs-extra';
 
+const TORRENTS_FILE = 'torrents.json';
+const DOWNLOADED_FILE = 'downloaded.json';
+
 async function extractTorrents() {
     try {
         console.log("Fetching RSS feed...");
         const { data } = await axios.get('https://torrentgalaxy.to/rss.php');
 
         const $ = cheerio.load(data, { xmlMode: true });
-        const torrents = [];
+        let torrents = [];
+
+        // Load previously downloaded torrents
+        let downloaded = [];
+        if (fs.existsSync(DOWNLOADED_FILE)) {
+            downloaded = fs.readJsonSync(DOWNLOADED_FILE);
+        }
 
         $('item').each((_, element) => {
             const url = $(element).find('link').text().trim();
             const title = $(element).find('title').text().trim();
 
             if (url.includes("watercache.nanobytes.org/get/") && title) {
-                // Ensure safe filenames
-                const safeFilename = title.replace(/[^a-zA-Z0-9._-]/g, '_');
-                torrents.push({ url, filename: safeFilename });
+                const safeFilename = title.replace(/[^a-zA-Z0-9._-]/g, '_') + ".torrent";
+
+                // Only add if NOT already downloaded
+                if (!downloaded.includes(safeFilename)) {
+                    torrents.push({ url, filename: safeFilename });
+                }
             }
         });
 
         if (torrents.length > 0) {
-            await fs.writeJson('torrents.json', torrents, { spaces: 2 });
-            console.log(`✅ Extracted ${torrents.length} torrents.`);
+            fs.writeJsonSync(TORRENTS_FILE, torrents, { spaces: 2 });
+            console.log(`✅ Found ${torrents.length} new torrents.`);
         } else {
-            console.log("⚠️ No torrents found.");
-            await fs.writeJson('torrents.json', []);
+            console.log("⚠️ No new torrents to download.");
+            fs.writeJsonSync(TORRENTS_FILE, []);
         }
     } catch (error) {
         console.error("❌ Error extracting torrents:", error);
