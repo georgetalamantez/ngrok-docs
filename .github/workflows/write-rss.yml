@@ -3,6 +3,9 @@ name: Sync RSS Feed to S3 Buckets
 on:
   schedule:
     - cron: '* * * * *'  # Runs at the start of every minute
+  push:
+    branches:
+      - main  # Runs when changes are pushed to the 'main' branch (adjust if needed)
 
 jobs:
   sync-rss-feed:
