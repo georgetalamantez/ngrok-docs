@@ -20,8 +20,9 @@ jobs:
         uses: actions/cache@v3
         with:
           path: hashes.json
-          key: hashes-cache-${{ github.run_id }}  # Unique cache per run
-          restore-keys: hashes-cache-
+          key: hashes-cache-${{ github.ref }}  # Cache key based on branch
+          restore-keys: |
+            hashes-cache-
 
       - name: Install Dependencies
         run: npm install axios cheerio fs-extra
@@ -34,4 +35,4 @@ jobs:
         uses: actions/cache@v3
         with:
           path: hashes.json
-          key: hashes-cache-${{ github.run_id }}  # Ensures cache updates
+          key: hashes-cache-${{ github.ref }}  # Ensures cache updates
