@@ -16,16 +16,16 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Install Dependencies
-        run: npm install axios cheerio fs-extra
-
       # 🔹 Restore cached downloaded.json BEFORE downloading
       - name: Restore Download History
         uses: actions/cache@v3
         with:
           path: downloaded.json
-          key: downloaded-json
-          restore-keys: downloaded-json-
+          key: downloaded-cache-${{ github.run_id }}
+          restore-keys: downloaded-cache-
+
+      - name: Install Dependencies
+        run: npm install axios cheerio fs-extra
 
       - name: Extract Torrent Links
         run: node extract-torrents.mjs
@@ -62,8 +62,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: downloaded.json
-          key: downloaded-json-${{ github.run_id }}
-          restore-keys: downloaded-json-
+          key: downloaded-cache-${{ github.run_id }}
           
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
