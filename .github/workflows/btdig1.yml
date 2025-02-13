@@ -15,12 +15,18 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
+      # 🔹 Calculate hash of hashes.json for the cache key
+      - name: Calculate hash of hashes.json
+        id: hash
+        run: echo "HASH=$(sha256sum hashes.json | cut -d' ' -f1)" >> $GITHUB_ENV
+        continue-on-error: true
+
       # 🔹 Restore cached hashes.json BEFORE scraping
       - name: Restore Cached Hashes
         uses: actions/cache@v3
         with:
           path: hashes.json
-          key: hashes-cache-${{ github.ref }}  # Cache key based on branch
+          key: hashes-cache-${{ env.HASH }}
           restore-keys: |
             hashes-cache-
 
@@ -35,4 +41,4 @@ jobs:
         uses: actions/cache@v3
         with:
           path: hashes.json
-          key: hashes-cache-${{ github.ref }}  # Ensures cache updates
+          key: hashes-cache-${{ env.HASH }}  # Ensures cache updates
