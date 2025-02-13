@@ -15,20 +15,13 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      # 🔹 Calculate hash of hashes.json for the cache key
-      - name: Calculate hash of hashes.json
-        id: hash
-        run: echo "HASH=$(sha256sum hashes.json | cut -d' ' -f1)" >> $GITHUB_ENV
-        continue-on-error: true
-
       # 🔹 Restore cached hashes.json BEFORE scraping
       - name: Restore Cached Hashes
         uses: actions/cache@v3
         with:
           path: hashes.json
-          key: hashes-cache-${{ env.HASH }}
-          restore-keys: |
-            hashes-cache-
+          key: hashes-cache-${{ github.run_id }}  # Unique cache per run
+          restore-keys: hashes-cache-
 
       - name: Install Dependencies
         run: npm install axios cheerio fs-extra
@@ -41,4 +34,4 @@ jobs:
         uses: actions/cache@v3
         with:
           path: hashes.json
-          key: hashes-cache-${{ env.HASH }}  # Ensures cache updates
+          key: hashes-cache-${{ github.run_id }}  # Ensures cache updates
