@@ -14,15 +14,21 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # 🔹 Restore cached downloaded.json BEFORE downloading
+      # 🔹 Restore downloaded.json from previous run
       - name: Restore Download History
-        uses: actions/cache@v3
+        uses: actions/download-artifact@v4
         with:
-          path: downloaded.json
-          key: downloaded-cache-${{ github.run_id }}
-          restore-keys: downloaded-cache-
+          name: downloaded-history
+          path: .
+
+      # Ensure downloaded.json exists
+      - name: Ensure Download History Exists
+        run: |
+          if [[ ! -f downloaded.json ]]; then
+            echo "[]" > downloaded.json
+          fi
 
       - name: Install Dependencies
         run: npm install axios cheerio fs-extra
@@ -33,10 +39,6 @@ jobs:
       - name: Download Torrents
         run: |
           if [[ -s torrents.json ]]; then
-            if [[ ! -f downloaded.json ]]; then
-              echo "[]" > downloaded.json
-            fi
-
             cat torrents.json | jq -c '.[]' | while read i; do
               url=$(echo "$i" | jq -r '.url')
               filename=$(echo "$i" | jq -r '.filename')
@@ -57,13 +59,14 @@ jobs:
             echo "No torrents found, skipping download."
           fi
 
-      # 🔹 Save updated downloaded.json to cache AFTER downloading
+      # 🔹 Upload updated downloaded.json as an artifact
       - name: Save Download History
-        uses: actions/cache@v3
+        uses: actions/upload-artifact@v4
         with:
+          name: downloaded-history
           path: downloaded.json
-          key: downloaded-cache-${{ github.run_id }}
-          
+          retention-days: 7  # Keep for 7 days (adjust if needed)
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
